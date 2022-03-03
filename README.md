@@ -1,6 +1,6 @@
 # DockerによるPython GPUディープラーニング環境構築
 
-UbuntuとDockerでJupyterLabの実行環境を構築
+UbuntuとDockerでJupyterLabの実行環境を構築<br>
 v1.0 20220225
 
 ## 想定要件
