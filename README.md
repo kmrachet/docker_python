@@ -4,12 +4,15 @@ UbuntuとDockerでJupyterLabの実行環境を構築<br>
 v1.0 20220225
 
 ## 想定要件
-Nvidia GPU搭載サーバ
+ホスト<br>
 - OS : Ubuntu Server 20.04 LTS
-- GPU: NvidiaのGPU
+- GPU: Nvidia GPU
 - Docker: 20.0 〜
 - オンボードでモニタ出力が可能なPC<br>
   ※GPUはドライバのインストール以降GPUは画面出力できなくなる
+  
+クライアント
+- macOS Monterey
 
 ## Ubuntuのインストール
 1. [Ubuntuのダウンロードページ](https://jp.ubuntu.com/download)からUbuntu ServerのISOイメージをダウンロードする
@@ -43,19 +46,19 @@ LANポートが複数あるとすべてのポートでセッションが確立�
     `[Service]`セクションの`ExecStart=/lib/...` 行の末尾に `--ignore=${3.でメモしたポート名}` を入力
 5. `sudo reboot`したときに`systemctl status systemd-networkd-wait-online`で動作確認する。`Active: active (exited)`になっていればOK
 
-一定時間後にスリープする場合、以下のコードをシェルで実行([参考](https://ocg.aori.u-tokyo.ac.jp/member/daigo/comp/memo/?val=valid&typ=all&nbr=2021052501))
+一定時間後にスリープする場合、以下のコードをシェルで実行([参考](https://ocg.aori.u-tokyo.ac.jp/member/daigo/comp/memo/?val=valid&typ=all&nbr=2021052501))<br>
 `sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target`
 
 ### ネットワーク設定
 #### IPアドレスの固定
-1. `ip addr` でイーサネットのポート名、IPアドレスを調べる(inet:IPアドレス、brd:ブロードキャストアドレス)<br>
-   ポート名 例:`eth0`、IPアドレス 例:`192.168.2.2`
+1. `ip addr` でイーサネットのポート名を調べる<br>
+   ポート名 例:`eth0`
 2. `ip route show` でデフォルトゲートウェイを調べる<br>
    例 `192.168.2.1`
 3. `systemd-resolve --status` でDNSサーバのIPアドレスを調べる(戻り方:`Q`キーを押下)<br>
    例 `192.168.1.1`
-4. `vi /etc/netplan/99_config.yaml` でconfigを作成(`.yml`は無効になるので注意)<br>
-   調べたものを記入(`eth0`のところにポート名を記入)。
+4. `vi /etc/netplan/99_config.yaml` でconfigを作成<br>
+   固定したいIPアドレスと上記の調べたものを記入
 
 ```yml
 network:
@@ -439,8 +442,8 @@ Dockerfileの実行
 USER=$1
 
 if [ -z $USER ] ; then
-        echo "please input an user name for an argument."
-        exit
+  echo "please input an user name for an argument."
+  exit
 fi
 
 usermod --shell /bin/bash
@@ -465,33 +468,33 @@ CONT_PORT=${PORT}
 HOST_IP="192.168.2.2"
 
 if [ -z $PORT ]; then
-	echo "please input a port number."
-	exit
+  echo "please input a port number."
+  exit
 fi
 
 if [ "$RM" = "no-remove" ]; then
-	docker container run \
-	--name ${CONT_NAME} \
-	-dit \
-	--gpus all \
-	-e TZ=Asia/Tokyo \
-	--mount type=bind,source=${SCRIPT_DIR}/../,target=/tf/workdir \
-	--mount type=bind,source=/usr/share/fonts/truetype,target=/usr/share/fonts/truetype \
-	-p ${PORT}:${PORT} \
-	tensorflow/tensorflow:kimura
+  docker container run \
+  --name ${CONT_NAME} \
+  -dit \
+  --gpus all \
+  -e TZ=Asia/Tokyo \
+  --mount type=bind,source=${SCRIPT_DIR}/../,target=/tf/workdir \
+  --mount type=bind,source=/usr/share/fonts/truetype,target=/usr/share/fonts/truetype \
+  -p ${PORT}:${PORT} \
+  tensorflow/tensorflow:kimura
 elif [ -z $RM ]; then
-	docker container run \
-	--name ${CONT_NAME} \
-	-dit \
-	--rm \
-	--gpus all \
-	-e TZ=Asia/Tokyo \
-	--mount type=bind,source=${SCRIPT_DIR}/../,target=/tf/workdir \
-	--mount type=bind,source=/usr/share/fonts/truetype,target=/usr/share/fonts/truetype \
-	-p ${PORT}:${PORT} \
-	tensorflow/tensorflow:kimura
+  docker container run \
+  --name ${CONT_NAME} \
+  -dit \
+  --rm \
+  --gpus all \
+  -e TZ=Asia/Tokyo \
+  --mount type=bind,source=${SCRIPT_DIR}/../,target=/tf/workdir \
+  --mount type=bind,source=/usr/share/fonts/truetype,target=/usr/share/fonts/truetype \
+  -p ${PORT}:${PORT} \
+  tensorflow/tensorflow:kimura
 else
-	echo "Invarid option. Please input like \"bash ${BASH_SOURCE:-$0} $PORT no-remove\""
+  echo "Invarid option. Please input like \"bash ${BASH_SOURCE:-$0} $PORT no-remove\""
 fi
 
 sleep 2
@@ -512,9 +515,9 @@ JUPYTER_LOG="$(docker container logs ${CONT_NAME} | grep -m1 token)"
 JUPYTER_TOKEN="$(echo $JUPYTER_LOG | awk -F '[=]' '{print $2}')"
 
 if [ -n "$JUPYTER_TOKEN" ]; then
-	echo "${JUPYTER_URL}${JUPYTER_TOKEN}"
+  echo "${JUPYTER_URL}${JUPYTER_TOKEN}"
 else
-	echo -e "Failed to check the container logs. Please run command \"docker container logs ${CONT_NAME} | grep -m1 token\" and check your Jupyter token."
+  echo -e "Failed to check the container logs. Please run command \"docker container logs ${CONT_NAME} | grep -m1 token\" and check your Jupyter token."
 fi
 ```
 
@@ -537,16 +540,16 @@ CONT_PORT="8888"
 
 echo "your container ID is below."
 docker container run \
-        -dit \
-        --rm \
-        -e JUPYTER_ENABLE_LAB=yes \
-        -e TZ=Asia/Tokyo \
-        -p $PORT:$CONT_PORT \
-        --name $CONT_NAME \
-        --user root \
-        --mount type=bind,source=$DIR/../,target=/home/jovyan/work \
-        --mount type=bind,source=/usr/local/share/fonts/,target=/usr/local/share/fonts/ \
-        jupyter/datascience-notebook
+  -dit \
+  --rm \
+  -e JUPYTER_ENABLE_LAB=yes \
+  -e TZ=Asia/Tokyo \
+  -p $PORT:$CONT_PORT \
+  --name $CONT_NAME \
+  --user root \
+  --mount type=bind,source=$DIR/../,target=/home/jovyan/work \
+  --mount type=bind,source=/usr/local/share/fonts/,target=/usr/local/share/fonts/ \
+  jupyter/datascience-notebook
 
 sleep 2
 
@@ -558,7 +561,7 @@ echo $GET_TOKEN
 
 ### GPUの分散処理
 
-参考1: https://www.tensorflow.org/api_docs/python/tf/distribute/Strategy
+参考1: https://www.tensorflow.org/api_docs/python/tf/distribute/Strategy <br>
 参考2: https://zenn.dev/ozora/articles/tensorflow_strategy
 
 Tensorflowはデフォルトでは単一のGPUを用いる。複数枚GPUを使用する場合、TensorflowのDockerコンテナを起動する際`--gpus`オプションで複数枚または`all`を指定して、モデルのコンパイル/ビルドまでをスコープで括るように記述する。
