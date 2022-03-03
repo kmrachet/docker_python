@@ -8,31 +8,22 @@ Nvidia GPU搭載サーバ
 - OS : Ubuntu Server 20.04 LTS
 - GPU: NvidiaのGPU
 - Docker: 20.0 〜
-- オンボードでモニタ出力が可能なPC
+- オンボードでモニタ出力が可能なPC<br>
   ※GPUはドライバのインストール以降GPUは画面出力できなくなる
-
-## よく使うコマンド
-
-- `ssh hoge@192.168.2.2`: SSHでIPアドレス`192.168.2.2`のサーバに`hoge`ユーザでパスワードログイン
-- `scp foo.txt hoge@192.168.2.2:/home/hoge/foobar`: ローカルホストにある`foo.txt`をIPアドレス`192.168.2.2`のサーバの`hoge`ユーザの`/home/hoge/foobar`フォルダへ転送
-  (Windowsにはバージョン1803以降対応、それ以前は後述)
-- `vi foo.txt`: `foo.txt`ファイルの変更、書き込み
 
 ## Ubuntuのインストール
 1. [Ubuntuのダウンロードページ](https://jp.ubuntu.com/download)からUbuntu ServerのISOイメージをダウンロードする
-2. DVDにマウントしてLive DVDを作成する
-3. Live DVDをサーバにする端末に入れて再起動
-4. BIOSを起動し、ブートメニューでLive DVDを選択し再起動
+2. DVDやUSBにマウントしてLiveメディアを作成する
+3. メディアをサーバにする端末に入れて再起動
+4. BIOSを起動し、ブートメニューでメディアを選択→Ubuntu Serverのインストールが始まる
 4. OpenSSH Serverを一緒にインストールしておく
 
 ## Ubuntuの初期設定
-以下全てroot権限で行う
-`sudo -i`
 
 ### パッケージのアップグレード
-1. `apt update`
-2. `apt upgrade`
-3. `apt install snapd`
+1. `sudo apt update`
+2. `sudo apt upgrade`
+3. `sudo apt install snapd`
 
 以下`snap`でパッケージ管理したほうがいいかも？
 
@@ -50,20 +41,20 @@ LANポートが複数あるとすべてのポートでセッションが確立�
 3. `networkctl` で`configuring`になっているポート名をメモする
 4. `/lib/systemd/system/NetworkManager-wait-online.service`を編集(※`/etc/systemd/system/network-online.target.wants/NetworkManager-wait-online.service`からシンボリックリンクされてる)
     `[Service]`セクションの`ExecStart=/lib/...` 行の末尾に `--ignore=${3.でメモしたポート名}` を入力
-5. `reboot`したときに`systemctl status systemd-networkd-wait-online`で動作確認する。`Active: active (exited)`になっていればOK
+5. `sudo reboot`したときに`systemctl status systemd-networkd-wait-online`で動作確認する。`Active: active (exited)`になっていればOK
 
 一定時間後にスリープする場合、以下のコードをシェルで実行([参考](https://ocg.aori.u-tokyo.ac.jp/member/daigo/comp/memo/?val=valid&typ=all&nbr=2021052501))
 `sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target`
 
 ### ネットワーク設定
 #### IPアドレスの固定
-1. `ip addr` でイーサネットのポート名、IPアドレスを調べる(inet:IPアドレス、brd:ブロードキャストアドレス)
+1. `ip addr` でイーサネットのポート名、IPアドレスを調べる(inet:IPアドレス、brd:ブロードキャストアドレス)<br>
    ポート名 例:`eth0`、IPアドレス 例:`192.168.2.2`
-2. `ip route show` でデフォルトゲートウェイを調べる
+2. `ip route show` でデフォルトゲートウェイを調べる<br>
    例 `192.168.2.1`
-3. `systemd-resolve --status` でDNSサーバのIPアドレスを調べる(戻り方:`Q`キーを押下)
+3. `systemd-resolve --status` でDNSサーバのIPアドレスを調べる(戻り方:`Q`キーを押下)<br>
    例 `192.168.1.1`
-4. `vi /etc/netplan/99_config.yaml` でconfigを作成(`.yml`は無効になるので注意)
+4. `vi /etc/netplan/99_config.yaml` でconfigを作成(`.yml`は無効になるので注意)<br>
    調べたものを記入(`eth0`のところにポート名を記入)。
 
 ```yml
@@ -101,8 +92,8 @@ WindowsでOpenSSHがインストールされていない場合
 3. システム環境変数Pathに配置したフォルダのパスを追加
 
 ##### 鍵交換ログイン
-ローカルホスト側一般ユーザで`~/.ssh`フォルダに移動し `ssh-keygen -t ed25519` でED25519鍵を生成(RSA他も指定できる)
-鍵はSSH接続する端末ごとに用意する必要はなく、`~~.pub`ファイルは複数のサーバに登録されても問題ない
+ローカルホスト側一般ユーザで`~/.ssh`フォルダに移動し `ssh-keygen -t ed25519` でED25519鍵を生成(RSA他も指定できる)<br>
+鍵はSSH接続するホストごとに用意する必要はなく、`~~.pub`ファイルは複数のサーバに登録されても問題ない
 
 Mac
 1. `brew` で`install ssh-copy-id`でをインストール
@@ -118,28 +109,6 @@ Mac以外
 1. ローカルホストで `ssh-keygen -R IPアドレス` で`known_hosts`に登録した鍵の情報を削除
 2. つなぎなおす
 
-### セキュリティ設定(※工事中)
-
-
-#### logwatch のインストール
-1. `apt install logwatch`
-2. とりあえず `no configuration` を選択
-3. `cp /usr/share/logwatch/default.conf/logwatch.conf /etc/logwatch/conf` でconfigファイルのテンプレートをコピー
-4. 編集する
-5. `cp /usr/share/postfix/main.cf.dist /etc/postfix/main.cf`
-6. 編集する
-7. その他
-    【起動時にエラーが出る】
-    `systemctl status postfix@-.service`  これなに？
-
-#### logrotateの設定
-一括設定
-1. `/etc/logrotate.conf`を変更(時間が来たら`crond`が読み込むので反映は不要?)
-
-個別変更
-1. `/etc/logrotate.d/` にある変えたい設定ファイルを変更
-2. `/usr/sbin/logrotate /etc/logrotate.conf` で設定(?)
-
 ### ユーザ設定
 ユーザ作成
 1. `sudo adduser $USER` でユーザを追加→パスワードを入力
@@ -148,7 +117,6 @@ Mac以外
 4. `cat /etc/group | grep sudo` を表示してグループに追加されているかを確認
 
 Dockerをインストールしたあと
-
 5. `sudo usermod -aG docker $USER`で`docker`グループにユーザを追加
 
 ### CUI環境を整える
