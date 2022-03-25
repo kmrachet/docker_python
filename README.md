@@ -111,11 +111,13 @@ Mac
 
 ### ユーザ設定
 ユーザ作成
-1. `sudo adduser $USER` でユーザを追加→パスワードを入力
-2. `sudo adduser $USER sudo` で`sudo`グループに追加
-3. `cat /etc/passwd`を表示してユーザ名一覧に名前があるかを確認
-4. `cat /etc/group | grep sudo` を表示してグループに追加されているかを確認
-5. `sudo adduser $USER docker`で`docker`グループにユーザを追加(Dockerをインストールしたあと)
+```shell
+sudo adduser $USER # ユーザを追加→パスワードを入力
+sudo adduser $USER sudo # sudoグループに追加
+cat /etc/passwd # ユーザ名一覧に名前があるかを確認
+cat /etc/group | grep sudo # グループに追加されているかを確認
+sudo adduser $USER docker # dockerグループにユーザを追加(Dockerをインストールしたあと)
+```
 
 ### CUI環境を整える
 #### byobu
