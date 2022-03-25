@@ -4,10 +4,10 @@
 
 ## メモ
 - `$アルファベット大文字`は変数を表すので、状況に応じて自分で変更する(例: `$USER`)
-- スクリプト行頭の`$`は一般ユーザ、`#`はrootユーザで実行する。rootユーザへのログインは、一般ユーザでログインしている状態で`sudo -i`→ログインしている一般ユーザのパスワードを入力
+- スクリプト行頭の`$`は一般ユーザ、`#`はrootユーザで実行する。<br>rootユーザへのログインは、一般ユーザでログインしている状態で`sudo -i`→ログインしている一般ユーザのパスワードを入力
 
-## 想定要件
-リモートホスト(サーバ)
+## 環境
+サーバ
 - OS : Ubuntu Server 20.04 LTS
 - CPU: 64bit
 - GPU: Nvidia GPU
@@ -15,9 +15,9 @@
 - オンボードでのモニタ出力が可能なPCが望ましい<br>
   **※Nvidia Driverインストール以降GPUは画面出力できなくなるため**
 
-ローカルホスト
+クライアント(手元の端末)
 - Windows10 v1803～
-- macOS
+- macOS / Linux
 
 ## Ubuntuのインストール
 BIOS(UEFI)の操作はマザーボードのメーカーによって異なる。
@@ -52,7 +52,7 @@ LANポートが複数あるとすべてのポートでセッションが確立�
     `[Service]`セクションの`ExecStart=/lib/...` 行の末尾に `--ignore=$3.でメモしたポート名` を入力
 5. `sudo reboot`したときに`systemctl status systemd-networkd-wait-online`で動作確認する。`Active: active (exited)`になっていればOK
 
-一定時間後にスリープする場合、以下のコードをシェルで実行([参考](https://ocg.aori.u-tokyo.ac.jp/member/daigo/comp/memo/?val=valid&typ=all&nbr=2021052501))<br>
+一定時間後にサーバがスリープする場合、以下のコードをシェルで実行([参考](https://ocg.aori.u-tokyo.ac.jp/member/daigo/comp/memo/?val=valid&typ=all&nbr=2021052501))<br>
 `sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target`
 
 ### ネットワーク設定
@@ -81,17 +81,26 @@ network:
 ```
 
 5. 作成した`99_config.yaml`を適用する<br>
-   `netplan apply`
+   `sudo netplan apply`
 6. `ip addr`で確認、`dynamic`がなくなってたらOK
 
 #### Open SSHで他端末からリモートアクセス
-##### インストール
-`apt install -y openssh-server` (Ubuntu Server初期インストール時に入れてる場合不要)
+**インストール**<br>Ubuntu Server初期インストール時に入れてる場合不要
+
+```shell
+# apt install -y openssh-server
+```
 
 ##### パスワードログイン
-1. ローカルホスト側で`ssh $ユーザ名@$IPアドレス`コマンドを実行
-2. yes -> パスワードを入力
-3. フィンガープリント　ログイン完了
+1. クライアント側で`ssh $USER名@$IP_ADDRESS`コマンドを実行<br>
+
+   `$USER`: ログインしたいユーザ名<br>
+
+   `$IP_ADDRESS`: サーバのIPアドレス
+
+2. はじめてサーバに接続するときは`known_hosts`でない端末へ接続するかを確認されるので`yes` -> サーバ側の`USER`ユーザのパスワードを入力
+
+3. ログイン完了
 
 WindowsでOpenSSHがインストールされていない場合
 - [Windows10 v1803以降](https://docs.microsoft.com/ja-jp/windows-server/administration/openssh/openssh_install_firstuse)
@@ -102,23 +111,24 @@ WindowsでOpenSSHがインストールされていない場合
 
 ##### 鍵交換ログイン
 **鍵の作成**<br>
-ローカルホスト側で`ssh-keygen -t ed25519` でED25519鍵を生成(RSA他も指定できる)<br>
+クライアント側で`ssh-keygen -t ed25519` でED25519鍵を生成(RSA他も指定できる)<br>
 パスフレーズを設定しない場合そのまま飛ばす
 
 **鍵の登録**<br>
 Mac
-1. `brew` で`install ssh-copy-id`でをインストール
-2. `ssh-copy-id id_ed25519 $ユーザ名@$IPアドレス` でサーバに公開鍵を転送
+
+1. `brew install ssh-copy-id`
+2. `ssh-copy-id id_ed25519 $USER@$IP_ADDRESS` でサーバに公開鍵を転送
 
 手動で登録
-1. `mkdir`でサーバ側に`~/.ssh`ディレクトリを作成
+1. サーバ側で`mkdir ~/.ssh`で一般ユーザのホームディレクトリ直下に`.ssh`ディレクトリを作成(ある場合は不要)
 2. `touch`で`.ssh`フォルダの中に`authorized_keys`という空ファイルを作成
-3. ローカルホスト側で以下を実行<br>
+3. クライアント側で以下を実行<br>
    `cat ~/.ssh/id_ed25519.pub | ssh $USER@$IP_ADDRESS 'cat >> .ssh/authorized_keys'`<br>
    ※`scp`等で`id_ed25519.pub`ファイルを転送して`authorized_keys`に追記してもOK
 
 **キーが変更された場合**
-1. ローカルホスト側で`ssh-keygen -R IPアドレス`を実行して`known_hosts`に登録した鍵の情報を削除
+1. クライアント側で`ssh-keygen -R $IP_ADDRESS`を実行して`known_hosts`に登録した鍵の情報を削除
 2. つなぎなおす
 
 ### ユーザ設定
@@ -126,14 +136,15 @@ Mac
 ```shell
 # adduser $USER # ユーザを追加→指示に従ってパスワードなどを入力
 # adduser $USER sudo # sudoグループに追加
-# cat /etc/passwd # ユーザ名一覧に名前があるかを確認
-# cat /etc/group | grep sudo # グループに追加されているかを確認
+$ cat /etc/passwd | grep $USER # ユーザ名一覧に名前があるかを確認
+$ cat /etc/group | grep sudo # グループに追加されているかを確認
 # adduser $USER docker # dockerグループにユーザを追加(Dockerをインストールしたあと)
 ```
 
 ### CUI環境を整える
 #### byobu
-tmux/screenのラッパー。複数のシェルを同時に使用したり、シェルの動作を維持したままデタッチできる。
+`tmux/screen`のラッパー。複数のシェルを同時に使用したり、シェルの動作を維持したままデタッチできる。
+
 1. Ubuntu Serverには標準でインストールされている。Ubuntu Desktopの場合、`apt install byobu`
 2. `byobu`コマンドでbyobuをアクティブにする。`byobu-activate`でログイン時に起動する設定を追加できる。
 3. `Ctrl + A`でエスケープシーケンスを設定する(デフォルトは`Ctrl + A` or `F12キー`)
@@ -570,6 +581,64 @@ GET_TOKEN=$(/bin/bash ./get_token.sh ${HOST_IP} ${PORT} ${CONT_NAME} ${CONT_PORT
 echo $GET_TOKEN
 ```
 
+### TensorBoardによる監視
+[TensorBoard](https://www.tensorflow.org/tensorboard/get_started)を使うことで、機械学習の進捗をGUIコンソールでリアルタイムに確認することができる。DockerコンテナではTensorBoardをインラインで実行できないため、専用のDockerコンテナを動かす必要がある。
+
+**TensorBoard用コンテナの定義のDockerfile**<br>
+
+`CMD`: コンテナを`run`するときに自動で実行するコマンドを記述する
+
+```dockerfile
+FROM tensorflow/tensorflow:latest
+ENV LOG_DIR=/tf/workdir/logs
+CMD tensorboard --logdir $LOG_DIR --host 0.0.0.0 --port 8888
+```
+
+イメージをビルドする
+
+`````shell
+docker image build -t tensorflow/tensorboard:hoge　.
+`````
+
+**TensorFlowの定義**<br>
+プロジェクトのディレクトリが下記の場合(`logs`ディレクトリと`training_checkpoints`ディレクトリは機械学習が回るときに自動で作成される)
+
+```shell
+~/test_project
+├ test_project.ipynb
+├ logs
+└ training_checkpoints
+```
+
+TensorFlowの`callbacks`にディレクトリを指定
+
+```python
+test_project.ipynb
+
+callbacks = [
+    TensorBoard(log_dir="logs"), 
+    ModelCheckpoint(filepath="training_checkpoints/checkpoint_{epoch}", save_weights_only=True), 
+    EarlyStopping(monitor="val_loss", patience=5),
+]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+model.fit(
+  train_dataset, validation_data=test_dataset, 
+  epochs=10, callbacks=callbacks, verbose=0
+)
+```
+
+TensorBoard用Dockerコンテナを`run`する。このとき`--mount`オプションの`source`引数には、TensorFlowのログが出力されるディレクトリのひとつ上を指定する。`$LOG_DIR`を変更する場合は`-e`オプションで環境変数を再定義する。
+
+```shell
+docker container run \
+	-dit \
+	--rm \
+	--name tensorboard \
+	--mount type=bind,source=~/test_project,target=/tf/workdir
+	-p 8889:8888 \
+	tensorflow/tensorboard:hoge
+```
+
 ### GPUの分散処理
 
 [参考1](https://www.tensorflow.org/api_docs/python/tf/distribute/Strategy) <br>
@@ -591,4 +660,4 @@ model.fit(...)
 ```
 
 `MirroredStrategy`以外にも、複数マシンでの動作やGoogle TPUにも対応するAPIがある。<br>
-[Bazelによる分散処理](https://www.tensorflow.org/install/source?hl=ja)もできるが、Warningが出る。バージョンが揃ってない？
+[Bazelによる分散処理](https://www.tensorflow.org/install/source?hl=ja)もできるが、コンパイルに関するWarningが出る。バージョンが揃ってない？
