@@ -1,31 +1,28 @@
 # DockerによるPython GPUディープラーニング環境構築
 
-UbuntuとDockerでJupyterLabの実行環境を構築<br>
-v1.0 20220225
+なんもわからん人向けのUbuntu&DockerによるPython実行環境構築<br>
 
 ## 想定要件
-ホスト
+リモートホスト(サーバ)
 - OS : Ubuntu Server 20.04 LTS
 - GPU: Nvidia GPU
 - Docker: 20.0 〜
-- オンボードでモニタ出力が可能なPC<br>
-  ※ドライバのインストール以降GPUでは画面出力できなくなる
+- オンボードでのモニタ出力が可能なPCが望ましい<br>
+  **※Nvidia Driverインストール以降GPUは画面出力できなくなるため**
 
 ## Ubuntuのインストール
+BIOS等
 1. [Ubuntuのダウンロードページ](https://jp.ubuntu.com/download)からUbuntu ServerのISOイメージをダウンロードする
 2. DVDやUSBにマウントしてLiveメディアを作成する
 3. メディアをサーバにする端末に入れて再起動
 4. BIOSを起動し、ブートメニューでメディアを選択→Ubuntu Serverのインストールが始まる
-4. OpenSSH Serverを一緒にインストールしておく
+4. OpenSSH Serverを一緒にインストールしておくと後でインストールする必要がなくなる
 
 ## Ubuntuの初期設定
 
 ### パッケージのアップグレード
-1. `sudo apt-get update`
-2. `sudo apt-get upgrade`
-3. `sudo apt install snapd`
-
-以下`snap`でパッケージ管理したほうがいいかも？
+1. `sudo apt update`
+2. `sudo apt upgrade`
 
 ### タイムゾーンの変更
 1. `timedatectl` で現在設定を確認
@@ -40,7 +37,7 @@ LANポートが複数あるとすべてのポートでセッションが確立�
     `Loaded:` 欄の設定ファイルのファイルパスを確認
 3. `networkctl` で`configuring`になっているポート名をメモする
 4. `/lib/systemd/system/NetworkManager-wait-online.service`を編集(※`/etc/systemd/system/network-online.target.wants/NetworkManager-wait-online.service`からシンボリックリンクされてる)
-    `[Service]`セクションの`ExecStart=/lib/...` 行の末尾に `--ignore=${3.でメモしたポート名}` を入力
+    `[Service]`セクションの`ExecStart=/lib/...` 行の末尾に `--ignore=$3.でメモしたポート名` を入力
 5. `sudo reboot`したときに`systemctl status systemd-networkd-wait-online`で動作確認する。`Active: active (exited)`になっていればOK
 
 一定時間後にスリープする場合、以下のコードをシェルで実行([参考](https://ocg.aori.u-tokyo.ac.jp/member/daigo/comp/memo/?val=valid&typ=all&nbr=2021052501))<br>
@@ -71,16 +68,16 @@ network:
         addresses: [192.168.1.1]
 ```
 
-5. `netplan apply`で作成した`99_config.yaml`を適用する
+5. 作成した`99_config.yaml`を適用する<br>
+   `netplan apply`
 6. `ip addr`で確認、`dynamic`がなくなってたらOK
 
-#### Open SSHで他端末からリモートアクセス(以下リモートアクセス可)
-
+#### Open SSHで他端末からリモートアクセス
 ##### インストール
 `apt install -y openssh-server` (Ubuntu Server初期インストール時に入れてる場合不要)
 
 ##### パスワードログイン
-1. `ssh ユーザ名@IPアドレス` コマンドを実行
+1. ローカルホスト側で`ssh $ユーザ名@$IPアドレス`コマンドを実行
 2. yes -> パスワードを入力
 3. フィンガープリント　ログイン完了
 
@@ -92,21 +89,24 @@ WindowsでOpenSSHがインストールされていない場合
 3. システム環境変数Pathに配置したフォルダのパスを追加
 
 ##### 鍵交換ログイン
-ローカルホスト側一般ユーザで`~/.ssh`フォルダに移動し `ssh-keygen -t ed25519` でED25519鍵を生成(RSA他も指定できる)<br>
-鍵はSSH接続するホストごとに用意する必要はなく、`~~.pub`ファイルは複数のサーバに登録されても問題ない
+**鍵の作成**<br>
+ローカルホスト側で`ssh-keygen -t ed25519` でED25519鍵を生成(RSA他も指定できる)<br>
+パスフレーズを設定しない場合そのまま飛ばす
 
+**鍵の登録**<br>
 Mac
 1. `brew` で`install ssh-copy-id`でをインストール
-2. `ssh-copy-id id_ed25519 ${ユーザ名}@${IPアドレス}` でサーバに公開鍵を転送
+2. `ssh-copy-id id_ed25519 $ユーザ名@$IPアドレス` でサーバに公開鍵を転送
 
-Mac以外
-1. `id_ed25519.pub`をサーバの`/home/${ユーザ名}/.ssh`ディレクトリへ転送
-2. `authorized_keys`ファイルに`id_ed25519.pub`の内容を`echo ssh-... >> authorized_keys`で追記
-   `authorized_keys`ファイルがない場合`.pub`ファイル名を変更する
-   書式：`ssh-${暗号化アルゴリズム} ${キー} ${ローカルホストのユーザ名}@${ローカルホストのマシン名}`
+手動で登録
+1. `mkdir`でサーバ側に`~/.ssh`ディレクトリを作成
+2. `touch`で`.ssh`フォルダの中に`authorized_keys`という空ファイルを作成
+3. ローカルホスト側で以下を実行<br>
+   `cat ~/.ssh/id_ed25519.pub | ssh $ユーザ名@$IPアドレス 'cat >> .ssh/authorized_keys'`<br>
+   ※`scp`等で`id_ed25519.pub`ファイルを転送して`authorized_keys`に追記してもOK
 
-##### SSHホストキーが変更された場合
-1. ローカルホストで `ssh-keygen -R IPアドレス` で`known_hosts`に登録した鍵の情報を削除
+**キーが変更された場合**
+1. ローカルホスト側で`ssh-keygen -R IPアドレス`を実行して`known_hosts`に登録した鍵の情報を削除
 2. つなぎなおす
 
 ### ユーザ設定
@@ -115,9 +115,7 @@ Mac以外
 2. `sudo adduser $USER sudo` で`sudo`グループに追加
 3. `cat /etc/passwd`を表示してユーザ名一覧に名前があるかを確認
 4. `cat /etc/group | grep sudo` を表示してグループに追加されているかを確認
-
-Dockerをインストールしたあと
-5. `sudo usermod -aG docker $USER`で`docker`グループにユーザを追加
+5. `sudo adduser $USER docker`で`docker`グループにユーザを追加(Dockerをインストールしたあと)
 
 ### CUI環境を整える
 #### byobu
@@ -167,7 +165,9 @@ Nvidia製GPUのドライバがインストールされると`nvidia-smi`コマ�
 #### フォントのインストール
 
 1. `wget`でフォントをダウンロード
-2. フォントファイルをディレクトリに配置(`.ttf`→`/usr/share/fonts/truetype`、`.otf`→`/user/share/fonts/opentype`)
+2. フォントファイルをディレクトリに配置<br>
+`.ttfファイル`→`/usr/share/fonts/truetype`<br>
+`.otfファイル`→`/user/share/fonts/opentype`
 3. `fc-cache -fv`で更新
 3. `fc-list` でインストールされているフォント一覧を確認
 
