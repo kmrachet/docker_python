@@ -335,13 +335,15 @@ Jupyterの公式ドキュメントに沿ってJupyter LabをDockerコンテナ�
    --user root \
    -p 8000:8888 \
    -e JUPYTER_ENABLE_LAB=yes \
-   --mount type=bind,source=/home/kimura,target=/home/jovyan/work \
+   --mount type=bind,source=/home/user,target=/home/jovyan/work \
    jupyter/datascience-notebook:latest /bin/bash
-
+   ```
+   
 2. `root`ユーザでDockerコンテナの`bash`が起動したら、Jupyter Labを起動する。このとき、IPアドレスは`0.0.0.0`で固定、ポート番号はDockerコンテナのものを指定する。
 
    ```shell
    jupyter lab --ip=0.0.0.0 --port=8888 --allow-root
+   ```
 
 3. Jupyter Labが起動するので、`To access the server, open this file in a browser:`の`Or copy and paste one of these URLs`のURLをコピーする。
 
@@ -362,6 +364,7 @@ Jupyterの公式ドキュメントに沿ってJupyter LabをDockerコンテナ�
 
    ```http
    http://192.168.2.2:8000/lab?token=XXXX...
+   ```
 
 4. Jupyter Labを停止する場合は、Jupyter Lab側でFile→Shut Downを選択するか、コマンドライン上で`Ctrl+C`→`Shutdown this Jupyter server (y/[n])?`のメッセージが表示されたら`Y`キーを押下する。
    Dockerコンテナの`bash`に戻ってくるので、`exit`コマンドを入力してコンテナを停止させる。
@@ -369,7 +372,7 @@ Jupyterの公式ドキュメントに沿ってJupyter LabをDockerコンテナ�
 
 ### `docker container run`のつかいかた
 
-構文: `docker container run オプション コンテナ名:タグ名 シェル名`
+構文: `docker container run $オプション $コンテナ名:$タグ名 $シェル名`
 
 よく使うオプション
 - `-it` / `-dit`: 対話モードで起動し、コンテナにログインする / デタッチする(どちらかを指定)
