@@ -1,17 +1,26 @@
 # DockerによるPython GPUディープラーニング環境構築
 
-なんもわからん人向けのUbuntu&DockerによるPython実行環境構築<br>
+なんもわからん人向けのUbuntu&DockerによるPython実行環境構築
+
+## メモ
+- `$アルファベット大文字`は変数を表すので、状況に応じて自分で変更する(例: `$USER`)
+- スクリプト行頭の`$`は一般ユーザ、`#`はrootユーザで実行する。rootユーザへのログインは、一般ユーザでログインしている状態で`sudo -i`→ログインしている一般ユーザのパスワードを入力
 
 ## 想定要件
 リモートホスト(サーバ)
 - OS : Ubuntu Server 20.04 LTS
+- CPU: 64bit
 - GPU: Nvidia GPU
 - Docker: 20.0 〜
 - オンボードでのモニタ出力が可能なPCが望ましい<br>
   **※Nvidia Driverインストール以降GPUは画面出力できなくなるため**
 
+ローカルホスト
+- Windows10 v1803～
+- macOS
+
 ## Ubuntuのインストール
-BIOS等
+BIOS(UEFI)の操作はマザーボードのメーカーによって異なる。
 1. [Ubuntuのダウンロードページ](https://jp.ubuntu.com/download)からUbuntu ServerのISOイメージをダウンロードする
 2. DVDやUSBにマウントしてLiveメディアを作成する
 3. メディアをサーバにする端末に入れて再起動
@@ -21,8 +30,10 @@ BIOS等
 ## Ubuntuの初期設定
 
 ### パッケージのアップグレード
-1. `sudo apt update`
-2. `sudo apt upgrade`
+```shell
+# apt update
+# apt upgrade
+```
 
 ### タイムゾーンの変更
 1. `timedatectl` で現在設定を確認
@@ -36,7 +47,8 @@ LANポートが複数あるとすべてのポートでセッションが確立�
 2. `systemctl status systemd-networkd-wait-online` でステータス確認
     `Loaded:` 欄の設定ファイルのファイルパスを確認
 3. `networkctl` で`configuring`になっているポート名をメモする
-4. `/lib/systemd/system/NetworkManager-wait-online.service`を編集(※`/etc/systemd/system/network-online.target.wants/NetworkManager-wait-online.service`からシンボリックリンクされてる)
+4. `/lib/systemd/system/NetworkManager-wait-online.service`を編集<br>
+   ※`/etc/systemd/system/network-online.target.wants/NetworkManager-wait-online.service`からシンボリックリンクされている
     `[Service]`セクションの`ExecStart=/lib/...` 行の末尾に `--ignore=$3.でメモしたポート名` を入力
 5. `sudo reboot`したときに`systemctl status systemd-networkd-wait-online`で動作確認する。`Active: active (exited)`になっていればOK
 
@@ -102,7 +114,7 @@ Mac
 1. `mkdir`でサーバ側に`~/.ssh`ディレクトリを作成
 2. `touch`で`.ssh`フォルダの中に`authorized_keys`という空ファイルを作成
 3. ローカルホスト側で以下を実行<br>
-   `cat ~/.ssh/id_ed25519.pub | ssh $ユーザ名@$IPアドレス 'cat >> .ssh/authorized_keys'`<br>
+   `cat ~/.ssh/id_ed25519.pub | ssh $USER@$IP_ADDRESS 'cat >> .ssh/authorized_keys'`<br>
    ※`scp`等で`id_ed25519.pub`ファイルを転送して`authorized_keys`に追記してもOK
 
 **キーが変更された場合**
@@ -112,11 +124,11 @@ Mac
 ### ユーザ設定
 ユーザ作成
 ```shell
-sudo adduser $USER # ユーザを追加→パスワードを入力
-sudo adduser $USER sudo # sudoグループに追加
-cat /etc/passwd # ユーザ名一覧に名前があるかを確認
-cat /etc/group | grep sudo # グループに追加されているかを確認
-sudo adduser $USER docker # dockerグループにユーザを追加(Dockerをインストールしたあと)
+# adduser $USER # ユーザを追加→指示に従ってパスワードなどを入力
+# adduser $USER sudo # sudoグループに追加
+# cat /etc/passwd # ユーザ名一覧に名前があるかを確認
+# cat /etc/group | grep sudo # グループに追加されているかを確認
+# adduser $USER docker # dockerグループにユーザを追加(Dockerをインストールしたあと)
 ```
 
 ### CUI環境を整える
@@ -197,8 +209,8 @@ Nvidia製GPUのドライバがインストールされると`nvidia-smi`コマ�
 
 ### Nvidia Driverのインストール
 
-[CUDA Toolkitのウェブサイト](https://developer.nvidia.com/cuda-downloads?target_os=Linux)のウェブサイトから該当するOSを選択し支持に従う。
-たとえば、[Ubuntu 20.04LTSにインストールする場合](https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=20.04&target_type=deb_local)、以下が表示される。
+[CUDA Toolkitのウェブサイト](https://developer.nvidia.com/cuda-downloads?target_os=Linux)のウェブサイトから該当するOSやアーキテクチャを選択する。<br>
+[Ubuntu 20.04LTSにインストールする場合](https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=20.04&target_type=deb_local)、以下が表示される。<br>
 これに従って、**最終行を`sudo apt-get -y install cuda-drivers`とする。**
 
 ```shell
@@ -208,10 +220,10 @@ wget https://developer.download.nvidia.com/compute/cuda/11.5.1/local_installers/
 sudo dpkg -i cuda-repo-ubuntu2004-11-5-local_11.5.1-495.29.05-1_amd64.deb
 sudo apt-key add /var/cuda-repo-ubuntu2004-11-5-local/7fa2af80.pub
 sudo apt-get update
-sudo apt-get -y install cuda
+sudo apt-get -y install cuda # -> sudo apt-get -y install cuda-driversへ変更し実行
 ```
 
-セキュアブートをオンにしている場合パスワードを求められるので、適当なものを設定し覚えておく(アカウントのログインパスワードと同一である必要はなし)
+セキュアブートをオンにしている場合パスワードを求められるので、適当なものを設定し覚えておく(アカウントのログインパスワードと同一である必要はない)
 
 ### Nvidia Container Toolkitのインストール
 
@@ -408,11 +420,10 @@ Docker Hubなどのドキュメントを確認したり、目的のDockerコン�
 
 ```dockerfile
 FROM tensorflow/tensorflow:latest-gpu-jupyter
-LABEL version="1.0.2"
-LABEL maintainer="hogehoge"
-LABEL description="This image is built from tensorflow official Docker image."
+LABEL version="1.0.2" \
+      maintainer="hogehoge"
 
-RUN apt-get update && apt-get install -y graphviz
+RUN apt update && apt install -y graphviz
 
 # install python packages
 RUN pip install -U pip ipython ipykernel && \
@@ -429,15 +440,15 @@ echo -n '{"codeCellConfig": {"fontFamily": "HackGen35 Console", "lineNumbers": t
 
 Dockerfileの実行
 
-`docker image build -t tensorflow/tensorflow:kimura .`でイメージが作成される
-`-t`オプションで`docker image ls`コマンドを実行したときに表示されるイメージ名とタグ名を設定する。
+`docker image build -t tensorflow/tensorflow:hoge .`でイメージ名`tensorflow/tensorflow`、タグ名`hoge`のイメージが作成される。<br>
+`-t`オプションで`docker image ls`コマンドを実行したときに表示されるイメージ名とタグ名を設定する。<br>
+`-f`オプションで任意のDockefileを指定することができる。
 
 ### シェルスクリプトでDockerコンテナの操作を簡略化する
 
-シェルスクリプトによるユーザ作成&設定ファイルのコピー
-`/root`ディレクトリにDocker用のシェルスクリプト等を入れておく
+実行は`bash ****.sh $ARG1 $ARG2`
 
-
+シェルスクリプトによるユーザ作成&設定ファイルのコピー<br>
 先に`adduser $USER`を実行しておく
 
 ```shell
@@ -451,12 +462,12 @@ fi
 
 usermod --shell /bin/bash
 usermod -aG sudo,docker,share ${USER}
-cp -r /root/docker /home/${USER}
 chown -R ${USER}:${USER} /home/${USER}/docker
 ```
-例) ポート、`--rm`するかどうかを指定してtensorflowのコンテナを立ち上げる
-※`$HOST_IP`を自分の環境に合わせて変更しておく
 
+
+例) ポート、`--rm`するかどうかを指定してTensorFlowのコンテナを立ち上げる
+※`$HOST_IP`を自分の環境に合わせて変更しておく
 
 ```shell
 # run_tensorflow.sh
@@ -467,7 +478,7 @@ RM=$2
 SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
 USER=$(whoami)
 CONT_NAME="${USER}_tensorflow"
-CONT_PORT=${PORT}
+CONT_PORT="8888"
 HOST_IP="192.168.2.2"
 
 if [ -z $PORT ]; then
@@ -484,7 +495,7 @@ if [ "$RM" = "no-remove" ]; then
   --mount type=bind,source=${SCRIPT_DIR}/../,target=/tf/workdir \
   --mount type=bind,source=/usr/share/fonts/truetype,target=/usr/share/fonts/truetype \
   -p ${PORT}:${PORT} \
-  tensorflow/tensorflow:kimura
+  tensorflow/tensorflow:hoge
 elif [ -z $RM ]; then
   docker container run \
   --name ${CONT_NAME} \
@@ -492,15 +503,17 @@ elif [ -z $RM ]; then
   --rm \
   --gpus all \
   -e TZ=Asia/Tokyo \
+  -e JUPYTER_ENABLE_LAB=yes \
   --mount type=bind,source=${SCRIPT_DIR}/../,target=/tf/workdir \
   --mount type=bind,source=/usr/share/fonts/truetype,target=/usr/share/fonts/truetype \
-  -p ${PORT}:${PORT} \
-  tensorflow/tensorflow:kimura
+  -p ${CONT_PORT}:${PORT} \
+  tensorflow/tensorflow:hoge
 else
   echo "Invarid option. Please input like \"bash ${BASH_SOURCE:-$0} $PORT no-remove\""
+  exit
 fi
 
-sleep 2
+sleep 5
 
 GET_TOKEN=$(/bin/bash ./get_token.sh ${CONT_NAME} ${CONT_PORT})
 echo -e "Access below URL.\n${GET_TOKEN}"
@@ -526,14 +539,11 @@ fi
 
 jupyter/datascience-notebookコンテナを立ち上げて、JupyterLabのトークンを自動で取得する
 
-
 ```shell
 #!/bin/bash
 
-echo "container name?"
-read NAME
-echo "port?"
-read PORT
+NAME=$1
+PORT=$2
 
 HOST_IP="192.168.2.165"
 USER=$(whoami)
@@ -560,12 +570,10 @@ GET_TOKEN=$(/bin/bash ./get_token.sh ${HOST_IP} ${PORT} ${CONT_NAME} ${CONT_PORT
 echo $GET_TOKEN
 ```
 
-
-
 ### GPUの分散処理
 
-参考1: https://www.tensorflow.org/api_docs/python/tf/distribute/Strategy <br>
-参考2: https://zenn.dev/ozora/articles/tensorflow_strategy
+[参考1](https://www.tensorflow.org/api_docs/python/tf/distribute/Strategy) <br>
+[参考2](https://zenn.dev/ozora/articles/tensorflow_strategy)
 
 Tensorflowはデフォルトでは単一のGPUを用いる。複数枚GPUを使用する場合、TensorflowのDockerコンテナを起動する際`--gpus`オプションで複数枚または`all`を指定して、モデルのコンパイル/ビルドまでをスコープで括るように記述する。
 
@@ -582,7 +590,5 @@ with strategy.scope():
 model.fit(...)
 ```
 
-`MirroredStrategy`以外にも、複数マシンでの動作やGoogle TPUにも対応するAPIがある。
-
-
-
+`MirroredStrategy`以外にも、複数マシンでの動作やGoogle TPUにも対応するAPIがある。<br>
+[Bazelによる分散処理](https://www.tensorflow.org/install/source?hl=ja)もできるが、Warningが出る。バージョンが揃ってない？
