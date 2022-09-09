@@ -192,7 +192,7 @@ Nvidia製GPUのドライバがインストールされると`nvidia-smi`コマ�
 1. `wget`でフォントをダウンロード
 2. フォントファイルをディレクトリに配置<br>
 `.ttfファイル`→`/usr/share/fonts/truetype`<br>
-`.otfファイル`→`/user/share/fonts/opentype`
+`.otfファイル`→`/usr/share/fonts/opentype`
 3. `fc-cache -fv`で更新
 3. `fc-list` でインストールされているフォント一覧を確認
 
