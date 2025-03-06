@@ -8,12 +8,14 @@
 
 ## 環境
 サーバ
-- OS : Ubuntu Server 20.04 LTS
+- OS : Ubuntu Server 22.04 LTS
 - CPU: 64bit
 - GPU: Nvidia GPU
 - Docker: 20.0 〜
 - オンボードでのモニタ出力が可能なPCが望ましい<br>
-  **※Nvidia Driverインストール以降GPUは画面出力できなくなるため**
+  **※Nvidia Driverのみをインストールすると、以降GPUは画面出力できなくなる**
+  `nvidia-toolkit`全体を入れる場合はどちらでも可
+  バラ完する場合iGPUつきのCPUが必要
 
 クライアント(手元の端末)
 - Windows10 v1803～
@@ -31,8 +33,8 @@ BIOS(UEFI)の操作はマザーボードのメーカーによって異なる。
 
 ### パッケージのアップグレード
 ```shell
-# apt update
-# apt upgrade
+# apt-get update
+# apt-get upgrade
 ```
 
 ### タイムゾーンの変更
@@ -57,11 +59,11 @@ LANポートが複数あるとすべてのポートでセッションが確立�
 
 ### ネットワーク設定
 #### IPアドレスの固定
-1. `ip addr` でイーサネットのポート名を調べる<br>
+1. `ip link` でイーサネットのポート名を調べる<br>
    ポート名 例:`eth0`
 2. `ip route show` でデフォルトゲートウェイを調べる<br>
    例 `192.168.2.1`
-3. `systemd-resolve --status` でDNSサーバのIPアドレスを調べる(戻り方:`Q`キーを押下)<br>
+3. `sudo resolvectl status` でDNSサーバのIPアドレスを調べる<br>
    例 `192.168.1.1`
 4. `vi /etc/netplan/99_config.yaml` でconfigを作成<br>
    固定したいIPアドレスと上記の調べたものを記入
@@ -69,9 +71,8 @@ LANポートが複数あるとすべてのポートでセッションが確立�
 ```yml
 network:
   version: 2
-  renderer: networkd
   ethernets:
-    eth0:
+    eno0:
       dhcp4: false
       dhcp6: false
       addresses: [192.168.2.2/24]
