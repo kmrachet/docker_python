@@ -27,7 +27,7 @@ BIOS(UEFI)の操作はマザーボードのメーカーによって異なる。
 2. DVDやUSBにマウントしてLiveメディアを作成する
 3. メディアをサーバにする端末に入れて再起動
 4. BIOSを起動し、ブートメニューでメディアを選択→Ubuntu Serverのインストールが始まる
-4. OpenSSH Serverを一緒にインストールしておくと後でインストールする必要がなくなる
+5. OpenSSH Serverを一緒にインストールしておくと後でインストールする必要がなくなる
 
 ## Ubuntuの初期設定
 
@@ -62,7 +62,7 @@ LANポートが複数あるとすべてのポートでセッションが確立�
 1. `ip link` でイーサネットのポート名を調べる<br>
    ポート名 例:`eth0`
 2. `ip route show` でデフォルトゲートウェイを調べる<br>
-   例 `192.168.2.1`
+   例 `192.168.1.1`
 3. `sudo resolvectl status` でDNSサーバのIPアドレスを調べる<br>
    例 `192.168.1.1`
 4. `vi /etc/netplan/99_config.yaml` でconfigを作成<br>
@@ -73,13 +73,13 @@ network:
   version: 2
   renderer: networkd
   ethernets:
-    eno0:
+    eth0:
       dhcp4: false
       dhcp6: false
-      addresses: [192.168.2.2/24]
+      addresses: [192.168.1.2/24]
       routes:
          - to: default
-           via: 192.168.2.1
+           via: 192.168.1.1
       nameservers:
         addresses: [192.168.1.1]
 ```
@@ -92,7 +92,7 @@ network:
 **インストール**<br>Ubuntu Server初期インストール時に入れてる場合不要
 
 ```shell
-# apt install -y openssh-server
+# apt-get install -y openssh-server
 ```
 
 ##### パスワードログイン
